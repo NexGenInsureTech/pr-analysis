@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#0f1220; --panel:#151935; --soft:#1e244a; --ink:#f7fafd;
-    --muted:#a7b0d6; --grid:#2a3164;
+    --muted:#a7b0d6; --grid:#2a3164; --warn:#ffcc66;
     --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     --sans: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
   }
@@ -17,7 +17,7 @@
   header{padding:20px 24px;border-bottom:1px solid var(--grid);background:linear-gradient(180deg,#111536,#0e1331)}
   h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.3px}
   .sub{color:var(--muted);font-size:12px;margin-top:4px}
-  .wrap{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px}
+  .wrap{display:grid;grid-template-columns:380px 1fr;gap:16px;padding:16px}
   .card{background:var(--panel);border:1px solid var(--grid);border-radius:12px}
   .card h2{font-size:14px;margin:0;padding:12px 14px;border-bottom:1px solid var(--grid);color:#cfe1ff}
   .card .body{padding:12px 14px}
@@ -26,15 +26,16 @@
   .tabs{display:flex;gap:8px;padding:8px}
   .tab-btn{background:var(--soft);border:1px solid var(--grid);padding:8px 12px;border-radius:10px;color:#dfe6ff;cursor:pointer}
   .tab-btn.active{background:linear-gradient(180deg,#223065,#1b2551);border-color:#4052a6;box-shadow:0 0 0 1px rgba(90,115,255,.25) inset}
-  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:8px;padding:8px;background:var(--soft);border-radius:10px;border:1px solid var(--grid)}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;padding:8px;background:var(--soft);border-radius:10px;border:1px solid var(--grid)}
   .toolbar label{font-size:12px;color:#cbd6ff}
   .toolbar select, .toolbar input{background:#0e1331;color:#f7fafd;border:1px solid var(--grid);padding:6px 8px;border-radius:8px}
   .toolbar .block{display:flex;flex-direction:column;gap:4px;min-width:180px}
   .toolbar .row{display:flex;gap:8px;align-items:center}
   .btn{background:linear-gradient(180deg,#1f9a72,#198a65);border:1px solid #2fb389;color:#07281f;font-weight:600;border-radius:10px;padding:8px 10px;cursor:pointer}
   .btn.secondary{background:linear-gradient(180deg,#233066,#1b2551);color:#d8e1ff;border-color:#4052a6}
+  .btn.warn{background:linear-gradient(180deg,#ffd27a,#ffbd45);border:1px solid #f5a623;color:#3b2a00}
   .grid{overflow:auto;border-top:1px solid var(--grid)}
-  table{border-collapse:separate;border-spacing:0;width:100%;min-width:1024px}
+  table{border-collapse:separate;border-spacing:0;width:100%;min-width:1040px}
   thead th{position:sticky;top:0;background:#0f1434;border-bottom:1px solid var(--grid);font-size:12px;color:#bcd0ff;padding:8px;white-space:nowrap;cursor:pointer}
   tbody td{border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;color:#eaf2ff;padding:8px;white-space:nowrap}
   tbody tr:nth-child(odd){background:rgba(255,255,255,.02)}
@@ -50,6 +51,16 @@
   .hidden{display:none !important}
   footer{padding:10px 16px;border-top:1px solid var(--grid);color:#9cb0ff;font-size:12px}
   .kbd{font-family:var(--mono);background:#0d112b;padding:2px 6px;border:1px solid var(--grid);border-radius:6px}
+  /* Diagnostics panel */
+  .diag{background:#231f11;border:1px solid #5a4b15;border-radius:10px;padding:10px;margin-top:10px}
+  .diag h3{margin:0 0 6px 0;font-size:13px;color:#ffdf8a}
+  .diag .row{display:flex;gap:8px;align-items:center;margin:6px 0}
+  .small{font-size:11px;color:#ccbf8a}
+  .sample{font-family:var(--mono);font-size:11px;background:#0f0e09;border:1px solid #5a4b15;padding:4px 6px;border-radius:6px;color:#ffe7a8}
+  /* Totals bar */
+  .totalsbar{display:flex;gap:12px;align-items:center;padding:8px 10px;background:#0f1434;border:1px solid #2a3164;border-radius:10px;margin:8px 8px 0 8px}
+  .totalsbar .k{font-size:11px;color:#bcd0ff}
+  .totalsbar .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -64,9 +75,19 @@
     <div class="body">
       <input id="fileInput" type="file" accept=".csv" />
       <div class="note" style="margin-top:8px">
-        Required columns: <em>Month</em>, <em>LINE OF BUSINESS</em>, <em>Zone</em>, <em>BA NAME</em>, <em>USGI NET PREMIUM</em>. (These exist in your PR export.) [2](https://universalsompo3-my.sharepoint.com/personal/nikash_deka_universalsompo_com/_layouts/15/Doc.aspx?sourcedoc=%7B2B844CAC-3D00-454C-80DA-166294571896%7D&file=SME_PR_MASTER_FY25-26_CSV.csv&action=default&mobileredirect=true)
+        Required columns: <em>Month</em>, <em>LINE OF BUSINESS</em>, <em>Zone</em>, <em>BA NAME</em>, <em>USGI NET PREMIUM</em>. Your dataset also contains intermediary/broker fields for the new slice. 
+      </div>
+      <!-- Diagnostics: only appears if duplicates detected -->
+      <div id="diagPanel" class="diag hidden">
+        <h3>Data Diagnostics: Duplicate column(s) detected</h3>
+        <div id="diagContent"></div>
+        <div class="row">
+          <button id="btnApplyDiag" class="btn warn">Apply selection</button>
+          <span class="small">You can change this later without re‑uploading.</span>
+        </div>
       </div>
     </div>
+
     <h2>2) Filters</h2>
     <div class="body">
       <div class="toolbar">
@@ -89,6 +110,10 @@
         <div class="block">
           <label>BA NAME (multi)</label>
           <select id="baFilter" multiple size="6"></select>
+        </div>
+        <div class="block">
+          <label>Intermediary (multi)</label>
+          <select id="intFilter" multiple size="6"></select>
         </div>
         <div class="block">
           <label>Endorsements</label>
@@ -115,16 +140,28 @@
         <button class="tab-btn active" data-tab="s1">Slice 1 — LOB MoM</button>
         <button class="tab-btn" data-tab="s2">Slice 2 — Zone × LOB MoM</button>
         <button class="tab-btn" data-tab="s3">Slice 3 — BA × LOB MoM</button>
+        <button class="tab-btn" data-tab="s4">Slice 4 — Intermediary × LOB MoM</button>
         <span class="pill" id="metricPill"></span>
         <span class="pill" id="rowsPill"></span>
         <div style="margin-left:auto" class="row">
           <button class="btn secondary" id="btnExport">Download current view (CSV)</button>
         </div>
       </div>
+
+      <!-- Totals bar (Grand Total for visible rows) -->
+      <div id="totalsBar" class="totalsbar hidden">
+        <span class="k">Grand Total:</span>
+        <span class="k">Value</span><span class="v" id="totValue">0</span>
+        <span class="k">Prev</span><span class="v" id="totPrev">0</span>
+        <span class="k">Abs Δ</span><span class="v" id="totAbs">0</span>
+        <span class="k">% Δ</span><span class="v" id="totPct">—</span>
+      </div>
+
       <div id="emptyState" class="note" style="margin:8px 12px">Upload a CSV to begin.</div>
       <div id="s1" class="grid"></div>
       <div id="s2" class="grid hidden"></div>
       <div id="s3" class="grid hidden"></div>
+      <div id="s4" class="grid hidden"></div>
     </div>
   </section>
 </div>
@@ -142,7 +179,7 @@
 <script>
 "use strict";
 
-/* ===================== CSV PARSER ===================== */
+/* ========== CSV PARSER ========== */
 function parseCSV(text){
   const rows=[]; let i=0, field='', row=[], inQuotes=false;
   while(i<text.length){
@@ -162,44 +199,28 @@ function parseCSV(text){
   return rows;
 }
 
-/* ===================== HELPERS ===================== */
+/* ========== HELPERS ========== */
 const $  = q => document.querySelector(q);
 const $$ = q => Array.from(document.querySelectorAll(q));
 const fmtNum = (n,d=0)=> (n==null||isNaN(n)) ? '' : Number(n).toLocaleString(undefined,{maximumFractionDigits:d});
 function pctStr(x){ if(x===Infinity) return "∞"; if(x==null||isNaN(x)) return ""; return (x*100).toFixed(1) + "%"; }
 const monthKey = (dt)=> `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
-
-// Human-friendly label for Month column
-function fmtMonthKey(mk){
-  const [y,m] = mk.split('-').map(Number);
-  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] || String(m).padStart(2,'0');
-  return `${mon}-${y}`;
-}
+function fmtMonthKey(mk){ const [y,m] = mk.split('-').map(Number); const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] || String(m).padStart(2,'0'); return `${mon}-${y}`; }
 
 function parseMonthAny(s){
   if (s == null) return null;
   s = String(s).trim();
-
   const mapMon = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
   const toYY = yy => (yy < 100 ? 2000 + yy : yy);
 
-  // Mon-YY or Mon YYYY
   { const m = s.match(/^([A-Za-z]{3})[\s-]?(\d{2,4})$/);
     if (m) { const mm = mapMon[m[1].toLowerCase()]; if (mm != null) return new Date(toYY(+m[2]), mm, 1); } }
-
-  // YYYY-MM or YYYY/MM or YYYY-MM-DD / YYYY/MM/DD
-  { const m = s.match(/^(\d{4})[-\/](\d{1,2})(?:[-\/]\d{1,2})?$/);
+  { const m = s.match(/^(\d{4})\d{1,2}(?:[-\/]\d{1,2})?$/);
     if (m) return new Date(+m[1], +m[2]-1, 1); }
-
-  // DD/MM/YYYY or DD-MM-YYYY
-  { const m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+  { const m = s.match(/^(\d{1,2})\d{1,2}\d{2,4}$/);
     if (m) return new Date(toYY(+m[3]), +m[2]-1, 1); }
-
-  // MM-YY or MM/YYYY
-  { const m = s.match(/^(\d{1,2})[-\/](\d{2,4})$/);
+  { const m = s.match(/^(\d{1,2})\d{2,4}$/);
     if (m && +m[1]>=1 && +m[1]<=12) return new Date(toYY(+m[2]), +m[1]-1, 1); }
-
-  // YYYYMM
   { const m = s.match(/^(\d{4})(\d{2})$/);
     if (m) return new Date(+m[1], +m[2]-1, 1); }
 
@@ -209,8 +230,18 @@ function parseMonthAny(s){
 
 function slug(s){ return String(s || '').toLowerCase().trim().replace(/\s+/g,'_'); }
 
-/* ---------- Robust header mapping with collision handling ---------- */
-// Build slug -> {indices: number[], originals: string[]}
+
+function toNumber(x){
+  if (x == null) return 0;
+  const s = String(x).replace(/[, ]+/g, '').trim(); // drop commas & spaces
+  if (s === '') return 0;
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
+}
+
+function getMulti(sel){ if(!sel) return new Set(); return new Set(Array.from(sel.selectedOptions).map(o=>o.value)); }
+
+/* ---------- Header mapping with collision handling ---------- */
 function buildHeaderMapMulti(headers){
   const map = new Map();
   headers.forEach((h,i)=>{
@@ -222,40 +253,43 @@ function buildHeaderMapMulti(headers){
   });
   return map;
 }
-
-// Choose the candidate column with the highest non-empty rate in first N rows
-function pickBestIndexForSlug(hmap, slugKey, rows, sampleN=400){
-  const entry = hmap.get(slugKey);
-  if(!entry) return null;
-  if(entry.indices.length===1) return entry.indices[0];
-
-  let bestIdx=entry.indices[0], bestScore=-1;
-  for(const idx of entry.indices){
-    let score=0;
-    for(let r=1; r<rows.length && r<=sampleN; r++){
-      const v = rows[r][idx];
-      if(v!=null && String(v).trim()!=='') score++;
-    }
-    if(score>bestScore){ bestScore=score; bestIdx=idx; }
+function columnStats(rows, idx, sampleN=150){
+  let nonEmpty=0, total=Math.min(rows.length-1, sampleN);
+  const freq = new Map();
+  for(let r=1; r<rows.length && r<=sampleN; r++){
+    const v = rows[r][idx];
+    const s = (v==null? '' : String(v).trim());
+    if(s!==''){ nonEmpty++; freq.set(s, (freq.get(s)||0)+1); }
   }
-  console.warn(`Duplicate header slug "${slugKey}" →`, entry);
-  console.warn(`Chose index ${bestIdx} with non-empty score = ${bestScore}`);
-  return bestIdx;
+  const distinct = freq.size;
+  const top = Array.from(freq.entries()).sort((a,b)=> b[1]-a[1]).slice(0,5).map(([k])=>k);
+  return {nonEmpty, total, distinct, top};
+}
+function pickBestIndexForSlug(hmap, slugKey, rows, sampleN=150){
+  const entry = hmap.get(slugKey);
+  if(!entry) return {index:null, candidates:[]};
+  const candidates = entry.indices.map(idx=>{
+    const st = columnStats(rows, idx, sampleN);
+    return { idx, label: entry.originals[entry.indices.indexOf(idx)], ...st };
+  });
+  if(candidates.length===1) return { index:candidates[0].idx, candidates };
+
+  // if duplicates, choose best by nonEmpty, then distinct, then leftmost
+  candidates.sort((a,b)=>{
+    if(b.nonEmpty!==a.nonEmpty) return b.nonEmpty-a.nonEmpty;
+    if(b.distinct!==a.distinct) return b.distinct-a.distinct;
+    return a.idx-b.idx;
+  });
+  return { index: candidates[0].idx, candidates };
 }
 
-function toNumber(x){
-  if(x==null) return 0;
-  const s = String(x).replace(/[, ]+/g,'').trim();
-  if(s==='') return 0;
-  const n = Number(s);
-  return isNaN(n) ? 0 : n;
-}
-
-/* ===================== STATE ===================== */
-let RAW=[], MONTHS=[], LOBS=[], ZONES=[], BAS=[];
+/* ========== STATE ========== */
+let RAW=[], MONTHS=[], LOBS=[], ZONES=[], BAS=[], INTERMEDIARIES=[];
 let METRIC_USED='';
+let RAW_CSV_ROWS=null, HEADERS=null, HMAP_MULTI=null;
+let COLUMN_OVERRIDE={}, ACTIVE_INDICES={};
 
-/* ===================== ENGINE ===================== */
+/* ========== ENGINE ========== */
 function groupSum(rows, keys){
   const map=new Map();
   for(const r of rows){
@@ -279,13 +313,8 @@ function groupSum(rows, keys){
   });
   return out;
 }
-function prevMonthKey(mk){
-  const [y,m]=mk.split('-').map(Number);
-  const d=new Date(y, m-1, 1); d.setMonth(d.getMonth()-1);
-  return monthKey(d);
-}
+function prevMonthKey(mk){ const [y,m]=mk.split('-').map(Number); const d=new Date(y, m-1, 1); d.setMonth(d.getMonth()-1); return monthKey(d); }
 
-/* ---------- Robust MoM builder: per-bucket month map ---------- */
 function toMoMTable(grouped, keys){
   const buckets = new Map(); // key -> Map(monthKey -> value)
   for(const r of grouped){
@@ -294,10 +323,9 @@ function toMoMTable(grouped, keys){
     if(!bm){ bm = new Map(); buckets.set(k,bm); }
     bm.set(r.monthKey, (bm.get(r.monthKey)||0) + r.val);
   }
-
   const rows=[];
   for(const [k, bm] of buckets){
-    const months = Array.from(bm.keys()).sort(); // YYYY-MM sorts lexicographically
+    const months = Array.from(bm.keys()).sort();
     for(const mk of months){
       const cur = bm.get(mk);
       const pmk = prevMonthKey(mk);
@@ -328,7 +356,7 @@ function toMoMTable(grouped, keys){
   return rows;
 }
 
-/* ===================== RENDERING ===================== */
+/* ========== RENDERING ========== */
 function makeTable(container, rows, columns, sortState){
   container.innerHTML='';
   const table=document.createElement('table');
@@ -345,14 +373,12 @@ function makeTable(container, rows, columns, sortState){
   thead.appendChild(trh);
   const tbody=document.createElement('tbody');
 
-  if(rows.length===0){
-    const tr=document.createElement('tr');
-    const td=document.createElement('td');
-    td.colSpan = columns.length;
-    td.textContent = 'No data matches current filters.';
-    td.style.color = '#a9b6ec';
+  if(!rows || rows.length===0){
+    const tr=document.createElement('tr'); const td=document.createElement('td');
+    td.colSpan = columns.length; td.textContent = 'No data matches current filters.'; td.style.color = '#a9b6ec';
     tr.appendChild(td); tbody.appendChild(tr);
     table.appendChild(thead); table.appendChild(tbody); container.appendChild(table);
+    updateTotals([]); // reset totals
     return;
   }
 
@@ -380,6 +406,30 @@ function makeTable(container, rows, columns, sortState){
     tbody.appendChild(tr);
   }
   table.appendChild(thead); table.appendChild(tbody); container.appendChild(table);
+
+  // Grand totals for the visible rows
+  updateTotals(rows);
+}
+
+function updateTotals(rows){
+  const bar = $('#totalsBar');
+  if(!rows || rows.length===0){
+    bar.classList.add('hidden');
+    $('#totValue').textContent='0'; $('#totPrev').textContent='0'; $('#totAbs').textContent='0'; $('#totPct').textContent='—';
+    return;
+  }
+  let sValue=0, sPrev=0, sAbs=0;
+  for(const r of rows){
+    if(typeof r.Value==='number') sValue+=r.Value;
+    if(typeof r.Prev_Month_Value==='number') sPrev+=r.Prev_Month_Value;
+    if(typeof r.MoM_Abs_Change==='number') sAbs+=r.MoM_Abs_Change;
+  }
+  const pct = (sPrev===0) ? (sValue>0 ? Infinity : null) : (sAbs / sPrev);
+  $('#totValue').textContent = fmtNum(sValue,0);
+  $('#totPrev').textContent  = fmtNum(sPrev,0);
+  $('#totAbs').textContent   = fmtNum(sAbs,0);
+  $('#totPct').textContent   = pctStr(pct) || '—';
+  bar.classList.remove('hidden');
 }
 
 let activeTab='s1'; const sortState={key:'', dir:1};
@@ -387,22 +437,26 @@ let activeTab='s1'; const sortState={key:'', dir:1};
 function renderActiveTab(){
   if(RAW.length===0){
     $('#emptyState').classList.remove('hidden');
-    $('#s1').classList.add('hidden'); $('#s2').classList.add('hidden'); $('#s3').classList.add('hidden');
-    $('#rowsPill').textContent='';
+    $('#s1').classList.add('hidden'); $('#s2').classList.add('hidden'); $('#s3').classList.add('hidden'); $('#s4').classList.add('hidden');
+    $('#rowsPill').textContent=''; updateTotals([]);
     return;
   }
-  $('#emptyState').classList.add('hidden'); $('#s1').classList.add('hidden'); $('#s2').classList.add('hidden'); $('#s3').classList.add('hidden');
+  $('#emptyState').classList.add('hidden'); $('#s1').classList.add('hidden'); $('#s2').classList.add('hidden'); $('#s3').classList.add('hidden'); $('#s4').classList.add('hidden');
 
   const [minM,maxM]=monthBounds();
-  const lobSel=getMulti($('#lobFilter')); const zoneSel=getMulti($('#zoneFilter')); const baSel=getMulti($('#baFilter'));
-  const excNeg = $('#excludeNegatives')?.checked;
+  const lobSel  = getMulti($('#lobFilter'));
+  const zoneSel = getMulti($('#zoneFilter'));
+  const baSel   = getMulti($('#baFilter'));
+  const intSel  = getMulti($('#intFilter'));
+  const excNeg  = $('#excludeNegatives')?.checked;
 
   const filtered = RAW.filter(r=>{
     if(r.monthKey<minM || r.monthKey>maxM) return false;
     if(lobSel.size  && !lobSel.has(r.lob))  return false;
     if(zoneSel.size && !zoneSel.has(r.zone)) return false;
     if(baSel.size   && !baSel.has(r.ba))    return false;
-    if(excNeg && r.val < 0) return false;   // exclude negative (endorsements)
+    if(intSel.size  && !intSel.has(r.intermediary)) return false;
+    if(excNeg && r.val < 0) return false;
     return true;
   });
 
@@ -427,16 +481,23 @@ function renderActiveTab(){
     $('#s2').classList.remove('hidden');
     makeTable($('#s2'), t, [{key:'Zone',label:'Zone'},{key:'LOB',label:'LINE OF BUSINESS'}, ...colsCommon], sortState);
     $('#rowsPill').textContent = `${t.length.toLocaleString()} rows`;
-  } else {
+  } else if(activeTab==='s3'){
     const g = groupSum(filtered, ['ba','lob']);
     const t = toMoMTable(g, ['ba','lob']).map(x=>({BA:x.ba, LOB:x.lob, ...x}));
     $('#s3').classList.remove('hidden');
     makeTable($('#s3'), t, [{key:'BA',label:'BA NAME'},{key:'LOB',label:'LINE OF BUSINESS'}, ...colsCommon], sortState);
     $('#rowsPill').textContent = `${t.length.toLocaleString()} rows`;
+  } else {
+    // Slice 4 — Intermediary × LOB
+    const g = groupSum(filtered, ['intermediary','lob']);
+    const t = toMoMTable(g, ['intermediary','lob']).map(x=>({Intermediary:x.intermediary, LOB:x.lob, ...x}));
+    $('#s4').classList.remove('hidden');
+    makeTable($('#s4'), t, [{key:'Intermediary',label:'Intermediary Name'},{key:'LOB',label:'LINE OF BUSINESS'}, ...colsCommon], sortState);
+    $('#rowsPill').textContent = `${t.length.toLocaleString()} rows`;
   }
 }
 
-function getMulti(sel){ return new Set(Array.from(sel.selectedOptions).map(o=>o.value)); }
+function getMulti(sel){ if(!sel) return new Set(); return new Set(Array.from(sel.selectedOptions).map(o=>o.value)); }
 function monthBounds(){
   const f=$('#fromMonth').value || MONTHS[0]; const t=$('#toMonth').value || MONTHS[MONTHS.length-1];
   return (f<=t)?[f,t]:[t,f];
@@ -451,9 +512,10 @@ function fillFilterOptions(){
   $('#lobFilter').innerHTML  = LOBS.map(v=> `<option value="${v}">${v}</option>`).join('');
   $('#zoneFilter').innerHTML = ZONES.map(v=> `<option value="${v}">${v}</option>`).join('');
   $('#baFilter').innerHTML   = BAS.map(v=> `<option value="${v}">${v}</option>`).join('');
+  $('#intFilter').innerHTML  = INTERMEDIARIES.map(v=> `<option value="${v}">${v}</option>`).join('');
 }
 
-/* ===================== EXPORT ===================== */
+/* ========== EXPORT ========== */
 function exportCurrent(){
   const container=document.getElementById(activeTab); const table=container.querySelector('table');
   if(!table){ alert('Nothing to export yet.'); return; }
@@ -471,40 +533,114 @@ function exportCurrent(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`MoM_${activeTab}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
 }
 
-/* ===================== INGESTION ===================== */
-function ingestCSV(text){
-  const rows=parseCSV(text);
-  if(!rows.length){ alert('Empty CSV'); return; }
-  const headers=rows[0];
+/* ========== INGESTION & REBUILD ========== */
+function resolveRequiredIndices(rows, headers){
+  HMAP_MULTI = buildHeaderMapMulti(headers);
 
-  // Robust map & pick (handles Zone vs "Zone " etc.)
-  const hmap=buildHeaderMapMulti(headers);
+  const monthPick = pickBestIndexForSlug(HMAP_MULTI, 'month', rows);
+  const lobPick   = pickBestIndexForSlug(HMAP_MULTI, 'line_of_business', rows);
+  const zonePick  = pickBestIndexForSlug(HMAP_MULTI, 'zone', rows);
+  const baPick    = pickBestIndexForSlug(HMAP_MULTI, 'ba_name', rows);
+  const netPick   = pickBestIndexForSlug(HMAP_MULTI, 'usgi_net_premium', rows);
 
-  const cMonth = pickBestIndexForSlug(hmap, 'month', rows);
-  const cLOB   = pickBestIndexForSlug(hmap, 'line_of_business', rows);
-  const cZone  = pickBestIndexForSlug(hmap, 'zone', rows);             // robust
-  const cBA    = pickBestIndexForSlug(hmap, 'ba_name', rows);
-  const cNET   = pickBestIndexForSlug(hmap, 'usgi_net_premium', rows);
-
-  const metricIdx = cNET;
-  METRIC_USED = metricIdx!=null ? headers[metricIdx] : 'USGI NET PREMIUM';
-  $('#metricPill').textContent = `Metric: ${METRIC_USED}`;
-
-  if(cMonth==null || cLOB==null || cZone==null || cBA==null || metricIdx==null){
-    alert('Missing required columns. Need Month, LINE OF BUSINESS, Zone, BA NAME, and USGI NET PREMIUM.');
-    console.warn({cMonth,cLOB,cZone,cBA,metricIdx,headers});
-    return;
+  // Intermediary can be named differently; try common variants
+  const intSlugOptions = ['intermediary_name','intermediary','broker','agent','broker_name','agent_name'];
+  let intPick = {index:null, candidates:[]};
+  for(const s of intSlugOptions){
+    intPick = pickBestIndexForSlug(HMAP_MULTI, s, rows);
+    if(intPick.index!=null) { intPick.slug=s; break; }
   }
 
+  ACTIVE_INDICES = {
+    cMonth: COLUMN_OVERRIDE.month ?? monthPick.index,
+    cLOB:   COLUMN_OVERRIDE.line_of_business ?? lobPick.index,
+    cZone:  COLUMN_OVERRIDE.zone ?? zonePick.index,
+    cBA:    COLUMN_OVERRIDE.ba_name ?? baPick.index,
+    cNET:   COLUMN_OVERRIDE.usgi_net_premium ?? netPick.index,
+    cINT:   COLUMN_OVERRIDE.intermediary_name ?? intPick.index
+  };
+
+  if([ACTIVE_INDICES.cMonth,ACTIVE_INDICES.cLOB,ACTIVE_INDICES.cZone,ACTIVE_INDICES.cBA,ACTIVE_INDICES.cNET].some(v=> v==null)){
+    alert('Missing required columns. Need Month, LINE OF BUSINESS, Zone, BA NAME, and USGI NET PREMIUM.');
+    console.warn('Indices:', ACTIVE_INDICES, 'Headers:', headers);
+    return false;
+  }
+  METRIC_USED = headers[ACTIVE_INDICES.cNET] || 'USGI NET PREMIUM';
+  $('#metricPill').textContent = `Metric: ${METRIC_USED}`;
+
   console.info('Column mapping:', {
-    Month: headers[cMonth], LOB: headers[cLOB], Zone: headers[cZone],
-    BA: headers[cBA], Metric: headers[cNET]
+    Month: headers[ACTIVE_INDICES.cMonth],
+    LOB:   headers[ACTIVE_INDICES.cLOB],
+    Zone:  headers[ACTIVE_INDICES.cZone],
+    BA:    headers[ACTIVE_INDICES.cBA],
+    Metric:headers[ACTIVE_INDICES.cNET],
+    Intermediary: ACTIVE_INDICES.cINT!=null ? headers[ACTIVE_INDICES.cINT] : '(not found)',
+    Indices: ACTIVE_INDICES
   });
 
-  const data=[];
-  const badMonths=[];
-  for(let i=1;i<rows.length;i++){
-    const r=rows[i];
+  // Build diagnostics UI if duplicates exist (we only show for Zone here)
+  buildDiagnosticsUI({
+    zonePick
+  });
+
+  return true;
+}
+
+function buildDiagnosticsUI(picks){
+  const dupes = [];
+  const addIfDup = (slugKey, pick) => {
+    const entry = HMAP_MULTI.get(slugKey);
+    if(entry && entry.indices.length>1){
+      dupes.push({ slugKey, pick });
+    }
+  };
+  addIfDup('zone', picks.zonePick);
+  const panel = $('#diagPanel'); const content = $('#diagContent');
+  if(dupes.length===0){ panel.classList.add('hidden'); content.innerHTML=''; return; }
+
+  panel.classList.remove('hidden');
+  content.innerHTML = dupes.map(({slugKey, pick})=>{
+    const entry = HMAP_MULTI.get(slugKey);
+    const items = entry.indices.map(idx=>{
+      const st = columnStats(RAW_CSV_ROWS, idx, 150);
+      const top = st.top.join(', ');
+      return `
+        <option value="${idx}">
+          idx ${idx} — non-empty ${st.nonEmpty}/${st.total}, distinct ${st.distinct}${top?` — e.g., ${top.slice(0,80)}`:''}
+        </option>`;
+    }).join('');
+    const label = slugKey==='zone' ? 'Zone' : slugKey;
+    return `
+      <div class="row">
+        <label style="min-width:80px">${label} column</label>
+        <select data-slug="${slugKey}" id="sel_${slugKey}">
+          ${items}
+        </select>
+        <span class="small">Pick which "${label}" column to use</span>
+      </div>`;
+  }).join('');
+}
+
+function applyDiagnosticsSelection(){
+  const selects = Array.from($('#diagContent').querySelectorAll('select[data-slug]'));
+  selects.forEach(sel=>{
+    const slugKey = sel.dataset.slug;
+    const chosenIdx = Number(sel.value);
+    COLUMN_OVERRIDE[slugKey] = chosenIdx;
+  });
+  rebuildFromRows();
+}
+
+function rebuildFromRows(){
+  if(!RAW_CSV_ROWS || !HEADERS) return;
+  if(!resolveRequiredIndices(RAW_CSV_ROWS, HEADERS)) return;
+
+  RAW=[]; MONTHS=[]; LOBS=[]; ZONES=[]; BAS=[]; INTERMEDIARIES=[];
+  const data=[]; const badMonths=[];
+  const {cMonth,cLOB,cZone,cBA,cNET,cINT} = ACTIVE_INDICES;
+
+  for(let i=1;i<RAW_CSV_ROWS.length;i++){
+    const r=RAW_CSV_ROWS[i];
     const d=parseMonthAny(r[cMonth]);
     if(!d){ badMonths.push(r[cMonth]); continue; }
     const mk=monthKey(d);
@@ -513,7 +649,8 @@ function ingestCSV(text){
       lob:String(r[cLOB]??'').trim(),
       zone:String(r[cZone]??'').trim(),
       ba:String(r[cBA]??'').trim(),
-      val:toNumber(r[metricIdx])
+      intermediary: (cINT!=null ? String(r[cINT]??'').trim() : ''),
+      val:toNumber(r[cNET])
     });
   }
 
@@ -524,7 +661,7 @@ function ingestCSV(text){
   RAW=data;
   if(RAW.length===0){
     alert('No valid rows after parsing. Check the Month column format in your CSV.');
-    console.warn('Headers:', headers);
+    console.warn('Headers:', HEADERS);
     return;
   }
 
@@ -532,15 +669,30 @@ function ingestCSV(text){
   LOBS   = Array.from(new Set(RAW.map(r=>r.lob))).sort((a,b)=> a.localeCompare(b));
   ZONES  = Array.from(new Set(RAW.map(r=>r.zone))).sort((a,b)=> a.localeCompare(b));
   BAS    = Array.from(new Set(RAW.map(r=>r.ba))).sort((a,b)=> a.localeCompare(b));
+  INTERMEDIARIES = Array.from(new Set(RAW.map(r=>r.intermediary))).filter(Boolean).sort((a,b)=> a.localeCompare(b));
 
   fillFilterOptions();
-  renderActiveTab();
+  requestAnimationFrame(renderActiveTab);
 }
 
-/* ===================== EVENTS ===================== */
+function ingestCSV(text){
+  const rows=parseCSV(text);
+  if(!rows.length){ alert('Empty CSV'); return; }
+  RAW_CSV_ROWS = rows;
+  HEADERS = rows[0];
+  if(!resolveRequiredIndices(RAW_CSV_ROWS, HEADERS)) return;
+  rebuildFromRows();
+}
+
+/* ========== EVENTS ========== */
 $('#fileInput').addEventListener('change', (e)=>{
   const f=e.target.files?.[0]; if(!f) return;
-  const reader=new FileReader(); reader.onload=ev=> ingestCSV(ev.target.result);
+  const reader=new FileReader();
+  reader.onload = ev => {
+    const work = () => ingestCSV(ev.target.result);
+    if (window.requestIdleCallback) requestIdleCallback(work, { timeout: 500 });
+    else setTimeout(work, 0);
+  };
   reader.readAsText(f);
 });
 $$('.tab-btn').forEach(b=>{
@@ -553,16 +705,17 @@ $$('.tab-btn').forEach(b=>{
 $('#btnClear').addEventListener('click', ()=>{
   $('#fromMonth').value = MONTHS[0] || '';
   $('#toMonth').value   = MONTHS[MONTHS.length-1] || '';
-  ['lobFilter','zoneFilter','baFilter'].forEach(id=>{
+  ['lobFilter','zoneFilter','baFilter','intFilter'].forEach(id=>{
     Array.from(document.getElementById(id).options).forEach(o=>o.selected=false);
   });
   $('#excludeNegatives').checked = false;
   renderActiveTab();
 });
-['fromMonth','toMonth','lobFilter','zoneFilter','baFilter','excludeNegatives'].forEach(id=>{
+['fromMonth','toMonth','lobFilter','zoneFilter','baFilter','intFilter','excludeNegatives'].forEach(id=>{
   const el=document.getElementById(id); if(el) el.addEventListener('change', renderActiveTab);
 });
 $('#btnExport').addEventListener('click', exportCurrent);
+$('#btnApplyDiag').addEventListener('click', applyDiagnosticsSelection);
 </script>
 </body>
 </html>
