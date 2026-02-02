@@ -51,12 +51,14 @@
   .hidden{display:none !important}
   footer{padding:10px 16px;border-top:1px solid var(--grid);color:#9cb0ff;font-size:12px}
   .kbd{font-family:var(--mono);background:#0d112b;padding:2px 6px;border:1px solid var(--grid);border-radius:6px}
+
   /* Diagnostics panel */
   .diag{background:#231f11;border:1px solid #5a4b15;border-radius:10px;padding:10px;margin-top:10px}
   .diag h3{margin:0 0 6px 0;font-size:13px;color:#ffdf8a}
   .diag .row{display:flex;gap:8px;align-items:center;margin:6px 0}
   .small{font-size:11px;color:#ccbf8a}
   .sample{font-family:var(--mono);font-size:11px;background:#0f0e09;border:1px solid #5a4b15;padding:4px 6px;border-radius:6px;color:#ffe7a8}
+
   /* Totals bar */
   .totalsbar{display:flex;gap:12px;align-items:center;padding:8px 10px;background:#0f1434;border:1px solid #2a3164;border-radius:10px;margin:8px 8px 0 8px}
   .totalsbar .k{font-size:11px;color:#bcd0ff}
@@ -157,30 +159,30 @@
         <span class="k">% Δ</span><span class="v" id="totPct">—</span>
       </div>
 
-<!-- Health Breakdown (Phase 1 – Step 1) -->
-<div id="healthBlock" class="totalsbar hidden" style="background:#10164a; border-color:#3a4aad">
-  <div style="display:flex;flex-direction:column;gap:6px;width:100%">
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-      <span class="k">Health Breakdown (latest month in range)</span>
-      <span class="k">Month</span><span class="v" id="hbMonth">—</span>
-      <span class="k">Existing Growth</span><span class="v" id="hbExisting">0</span>
-      <span class="k">New Business</span><span class="v" id="hbNew">0</span>
-      <span class="k">Degrowth</span><span class="v" id="hbDegr">0</span>
-      <span class="k">Dropped</span><span class="v" id="hbDrop">0</span>
-      <span class="k">Flat Base</span><span class="v" id="hbFlat">0</span>
-      <span class="k">Net Δ</span><span class="v" id="hbNet">0</span>
-    </div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-      <span class="k">% Existing of Growth</span><span class="v" id="hbPctExisting">—</span>
-      <span class="k">% New of Growth</span><span class="v" id="hbPctNew">—</span>
-      <span class="k">% Base Under Stress</span><span class="v" id="hbPctStress">—</span>
-      <span class="k">Narrative</span><span class="v" id="hbNarr">—</span>
-    </div>
-  </div>
-  <div style="margin-left:auto" class="row">
-    <button class="btn secondary" id="btnExportHealth">Download health summary (CSV)</button>
-  </div>
-</div>
+      <!-- Health Breakdown (Phase 1 – Step 1) -->
+      <div id="healthBlock" class="totalsbar hidden" style="background:#10164a; border-color:#3a4aad">
+        <div style="display:flex;flex-direction:column;gap:6px;width:100%">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <span class="k">Health Breakdown (latest month in range)</span>
+            <span class="k">Month</span><span class="v" id="hbMonth">—</span>
+            <span class="k">Existing Growth</span><span class="v" id="hbExisting">0</span>
+            <span class="k">New Business</span><span class="v" id="hbNew">0</span>
+            <span class="k">Degrowth</span><span class="v" id="hbDegr">0</span>
+            <span class="k">Dropped</span><span class="v" id="hbDrop">0</span>
+            <span class="k">Flat Base</span><span class="v" id="hbFlat">0</span>
+            <span class="k">Net Δ</span><span class="v" id="hbNet">0</span>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <span class="k">% Existing of Growth</span><span class="v" id="hbPctExisting">—</span>
+            <span class="k">% New of Growth</span><span class="v" id="hbPctNew">—</span>
+            <span class="k">% Base Under Stress</span><span class="v" id="hbPctStress">—</span>
+            <span class="k">Narrative</span><span class="v" id="hbNarr">—</span>
+          </div>
+        </div>
+        <div style="margin-left:auto" class="row">
+          <button class="btn secondary" id="btnExportHealth">Download health summary (CSV)</button>
+        </div>
+      </div>
 
       <div id="emptyState" class="note" style="margin:8px 12px">Upload a CSV to begin.</div>
       <div id="s1" class="grid"></div>
@@ -204,7 +206,9 @@
 <script>
 "use strict";
 
-/* ========== CSV PARSER ========== */
+/* =============================================================================
+   CSV PARSER
+============================================================================= */
 function parseCSV(text){
   const rows=[]; let i=0, field='', row=[], inQuotes=false;
   while(i<text.length){
@@ -224,7 +228,9 @@ function parseCSV(text){
   return rows;
 }
 
-/* ========== HELPERS ========== */
+/* =============================================================================
+   HELPERS
+============================================================================= */
 const $  = q => document.querySelector(q);
 const $$ = q => Array.from(document.querySelectorAll(q));
 const fmtNum = (n,d=0)=> (n==null||isNaN(n)) ? '' : Number(n).toLocaleString(undefined,{maximumFractionDigits:d});
@@ -240,7 +246,8 @@ function parseMonthAny(s){
 
   { const m = s.match(/^([A-Za-z]{3})[\s-]?(\d{2,4})$/);
     if (m) { const mm = mapMon[m[1].toLowerCase()]; if (mm != null) return new Date(toYY(+m[2]), mm, 1); } }
-  { const m = s.match(/^(\d{4})\d{1,2}(?:[-\/]\d{1,2})?$/);
+  // Fixed capture for YYYY[-/]MM or YYYYMM
+  { const m = s.match(/^(\d{4})[-\/]?(\d{1,2})(?:[-\/]\d{1,2})?$/);
     if (m) return new Date(+m[1], +m[2]-1, 1); }
   { const m = s.match(/^(\d{1,2})\d{1,2}\d{2,4}$/);
     if (m) return new Date(toYY(+m[3]), +m[2]-1, 1); }
@@ -255,7 +262,6 @@ function parseMonthAny(s){
 
 function slug(s){ return String(s || '').toLowerCase().trim().replace(/\s+/g,'_'); }
 
-
 function toNumber(x){
   if (x == null) return 0;
   const s = String(x).replace(/[, ]+/g, '').trim(); // drop commas & spaces
@@ -266,7 +272,7 @@ function toNumber(x){
 
 function getMulti(sel){ if(!sel) return new Set(); return new Set(Array.from(sel.selectedOptions).map(o=>o.value)); }
 
-/* ---------- Header mapping with collision handling ---------- */
+/* Header mapping with collision handling */
 function buildHeaderMapMulti(headers){
   const map = new Map();
   headers.forEach((h,i)=>{
@@ -298,7 +304,6 @@ function pickBestIndexForSlug(hmap, slugKey, rows, sampleN=150){
     return { idx, label: entry.originals[entry.indices.indexOf(idx)], ...st };
   });
   if(candidates.length===1) return { index:candidates[0].idx, candidates };
-
   // if duplicates, choose best by nonEmpty, then distinct, then leftmost
   candidates.sort((a,b)=>{
     if(b.nonEmpty!==a.nonEmpty) return b.nonEmpty-a.nonEmpty;
@@ -308,13 +313,17 @@ function pickBestIndexForSlug(hmap, slugKey, rows, sampleN=150){
   return { index: candidates[0].idx, candidates };
 }
 
-/* ========== STATE ========== */
+/* =============================================================================
+   STATE
+============================================================================= */
 let RAW=[], MONTHS=[], LOBS=[], ZONES=[], BAS=[], INTERMEDIARIES=[];
 let METRIC_USED='';
 let RAW_CSV_ROWS=null, HEADERS=null, HMAP_MULTI=null;
 let COLUMN_OVERRIDE={}, ACTIVE_INDICES={};
 
-/* ========== ENGINE ========== */
+/* =============================================================================
+   ENGINE
+============================================================================= */
 function groupSum(rows, keys){
   const map=new Map();
   for(const r of rows){
@@ -381,7 +390,9 @@ function toMoMTable(grouped, keys){
   return rows;
 }
 
-/* ========== RENDERING ========== */
+/* =============================================================================
+   RENDERING
+============================================================================= */
 function makeTable(container, rows, columns, sortState){
   container.innerHTML='';
   const table=document.createElement('table');
@@ -459,11 +470,190 @@ function updateTotals(rows){
 
 let activeTab='s1'; const sortState={key:'', dir:1};
 
+function monthBounds(){
+  const f=$('#fromMonth').value || MONTHS[0]; const t=$('#toMonth').value || MONTHS[MONTHS.length-1];
+  return (f<=t)?[f,t]:[t,f];
+}
+function fillFilterOptions(){
+  const fm=$('#fromMonth'), tm=$('#toMonth');
+  const fmt=(mk)=>{ const [y,m]=mk.split('-'); return `${y}-${m}`; };
+  fm.innerHTML = MONTHS.map(mk=> `<option value="${mk}">${fmt(mk)}</option>`).join('');
+  tm.innerHTML = fm.innerHTML;
+  fm.value = MONTHS[0] || ''; tm.value = MONTHS[MONTHS.length-1] || '';
+
+  $('#lobFilter').innerHTML  = LOBS.map(v=> `<option value="${v}">${v}</option>`).join('');
+  $('#zoneFilter').innerHTML = ZONES.map(v=> `<option value="${v}">${v}</option>`).join('');
+  $('#baFilter').innerHTML   = BAS.map(v=> `<option value="${v}">${v}</option>`).join('');
+  $('#intFilter').innerHTML  = INTERMEDIARIES.map(v=> `<option value="${v}">${v}</option>`).join('');
+}
+
+/* =============================================================================
+   HEALTH BREAKDOWN (Phase 1 – Step 1)
+   Decomposes latest month in current range & filters by Growth_Flag
+============================================================================= */
+function computeHealthBreakdown(filteredRows){
+  if (!filteredRows || filteredRows.length === 0) return null;
+
+  // Identify the latest month present in the filtered raw
+  const latest = filteredRows.reduce((acc, r) => (acc < r.monthKey ? r.monthKey : acc), filteredRows[0].monthKey);
+
+  // Build grouping keys based on active tab
+  const keys =
+    activeTab === 's1' ? ['lob'] :
+    activeTab === 's2' ? ['zone','lob'] :
+    activeTab === 's3' ? ['ba','lob'] :
+                         ['intermediary','lob'];
+
+  const g = groupSum(filteredRows, keys);
+  const t = toMoMTable(g, keys);
+
+  // Only consider latest month rows
+  const latestRows = t.filter(x => x.Month === latest);
+  if (latestRows.length === 0) return null;
+
+  const byFlag = {Growth:0, New:0, Degrowth:0, Drop:0, Flat:0};
+  let valueTotal = 0, prevTotal = 0, absTotal = 0;
+
+  for (const r of latestRows){
+    const flag = r.Growth_Flag || 'NA';
+    if (flag in byFlag){
+      byFlag[flag] += (typeof r.MoM_Abs_Change === 'number' ? r.MoM_Abs_Change : 0);
+    }
+    if (typeof r.Value === 'number') valueTotal += r.Value;
+    if (typeof r.Prev_Month_Value === 'number') prevTotal += r.Prev_Month_Value;
+    if (typeof r.MoM_Abs_Change === 'number') absTotal += r.MoM_Abs_Change;
+  }
+
+  const existingGrowth = Math.max(0, byFlag.Growth);
+  const newBusiness    = Math.max(0, byFlag.New);
+  const growthPool     = existingGrowth + newBusiness;
+
+  const degr   = byFlag.Degrowth;            // negative contributions expected
+  const drop   = byFlag.Drop;                // negative
+  const flat   = byFlag.Flat || 0;           // near zero
+  const erosion = Math.abs(Math.min(0, degr)) + Math.abs(Math.min(0, drop));
+
+  const pctExisting = growthPool > 0 ? (existingGrowth / growthPool) : null;
+  const pctNew      = growthPool > 0 ? (newBusiness / growthPool)   : null;
+  const denomForStress = prevTotal > 0 ? prevTotal : (valueTotal > 0 ? valueTotal : null);
+  const pctStress = denomForStress ? (erosion / denomForStress) : null;
+
+  const parts = [];
+  const momPct = (prevTotal === 0) ? (valueTotal > 0 ? Infinity : null) : (absTotal / prevTotal);
+  if (momPct != null) parts.push(`SME book ${momPct >= 0 ? 'grew' : 'declined'} ${pctStr(Math.abs(momPct))}`);
+  if (growthPool > 0) parts.push(`${pctStr(pctExisting)} from existing base, ${pctStr(pctNew)} from new acquisition`);
+  if (erosion > 0 && pctStress != null) parts.push(`stress at ${pctStr(pctStress)} of base`);
+  const narrative = parts.length ? parts.join('; ') : '—';
+
+  return {
+    monthKey: latest,
+    byFlag,
+    totals: { valueTotal, prevTotal, absTotal },
+    composition: { existingGrowth, newBusiness, growthPool, erosion, flat },
+    percents: { pctExisting, pctNew, pctStress, momPct },
+    narrative
+  };
+}
+
+function updateHealthBlock(filteredRaw){
+  const block = document.getElementById('healthBlock');
+  if (!filteredRaw || filteredRaw.length === 0){
+    block.classList.add('hidden');
+    return;
+  }
+  const hb = computeHealthBreakdown(filteredRaw);
+  if (!hb){
+    block.classList.add('hidden');
+    return;
+  }
+  // Populate UI
+  document.getElementById('hbMonth').textContent = fmtMonthKey(hb.monthKey);
+  document.getElementById('hbExisting').textContent = fmtNum(hb.composition.existingGrowth, 0);
+  document.getElementById('hbNew').textContent      = fmtNum(hb.composition.newBusiness, 0);
+  document.getElementById('hbDegr').textContent     = fmtNum(hb.byFlag.Degrowth, 0);
+  document.getElementById('hbDrop').textContent     = fmtNum(hb.byFlag.Drop, 0);
+  document.getElementById('hbFlat').textContent     = fmtNum(hb.byFlag.Flat, 0);
+  document.getElementById('hbNet').textContent      = fmtNum(hb.totals.absTotal, 0);
+
+  document.getElementById('hbPctExisting').textContent = hb.percents.pctExisting == null ? '—' : pctStr(hb.percents.pctExisting);
+  document.getElementById('hbPctNew').textContent      = hb.percents.pctNew == null ? '—' : pctStr(hb.percents.pctNew);
+  document.getElementById('hbPctStress').textContent   = hb.percents.pctStress == null ? '—' : pctStr(hb.percents.pctStress);
+  document.getElementById('hbNarr').textContent        = hb.narrative || '—';
+
+  block.classList.remove('hidden');
+}
+
+function exportHealthSummary(){
+  const block = document.getElementById('healthBlock');
+  if (block.classList.contains('hidden')){
+    alert('Health summary not available yet. Apply filters or load data.');
+    return;
+  }
+
+  // Rebuild filtered RAW snapshot (keep logic identical to renderActiveTab filter)
+  const [minM, maxM] = monthBounds();
+  const lobSel  = getMulti($('#lobFilter'));
+  const zoneSel = getMulti($('#zoneFilter'));
+  const baSel   = getMulti($('#baFilter'));
+  const intSel  = getMulti($('#intFilter'));
+  const excNeg  = $('#excludeNegatives')?.checked;
+
+  const filtered = RAW.filter(r=>{
+    if(r.monthKey < minM || r.monthKey > maxM) return false;
+    if(lobSel.size  && !lobSel.has(r.lob))  return false;
+    if(zoneSel.size && !zoneSel.has(r.zone)) return false;
+    if(baSel.size   && !baSel.has(r.ba))    return false;
+    if(intSel.size  && !intSel.has(r.intermediary)) return false;
+    if(excNeg && r.val < 0) return false;
+    return true;
+  });
+
+  const hb = computeHealthBreakdown(filtered);
+  if(!hb){ alert('Nothing to export.'); return; }
+
+  const headers = [
+    'Month','Value','Prev','Net_Delta',
+    'Existing_Growth','New_Business','Degrowth','Dropped','Flat',
+    'Pct_Existing_of_Growth','Pct_New_of_Growth','Pct_Base_Under_Stress','Narrative'
+  ];
+  const row = [
+    fmtMonthKey(hb.monthKey),
+    hb.totals.valueTotal,
+    hb.totals.prevTotal,
+    hb.totals.absTotal,
+    hb.composition.existingGrowth,
+    hb.composition.newBusiness,
+    hb.byFlag.Degrowth,
+    hb.byFlag.Drop,
+    hb.byFlag.Flat,
+    hb.percents.pctExisting == null ? '' : (hb.percents.pctExisting*100).toFixed(1) + '%',
+    hb.percents.pctNew == null ? '' : (hb.percents.pctNew*100).toFixed(1) + '%',
+    hb.percents.pctStress == null ? '' : (hb.percents.pctStress*100).toFixed(1) + '%',
+    hb.narrative
+  ];
+
+  const csv = [headers.join(','), row.map(v=>{
+    const s = String(v==null?'':v).replaceAll('\n',' ').replaceAll('\r',' ');
+    return (s.includes(',')||s.includes('"')) ? `"${s.replaceAll('"','""')}"` : s;
+  }).join(',')].join('\n');
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Health_Summary_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+/* =============================================================================
+   ACTIVE TAB RENDER
+============================================================================= */
 function renderActiveTab(){
   if(RAW.length===0){
     $('#emptyState').classList.remove('hidden');
     $('#s1').classList.add('hidden'); $('#s2').classList.add('hidden'); $('#s3').classList.add('hidden'); $('#s4').classList.add('hidden');
     $('#rowsPill').textContent=''; updateTotals([]);
+    // Hide health block if no data
+    $('#healthBlock').classList.add('hidden');
     return;
   }
   $('#emptyState').classList.add('hidden'); $('#s1').classList.add('hidden'); $('#s2').classList.add('hidden'); $('#s3').classList.add('hidden'); $('#s4').classList.add('hidden');
@@ -484,6 +674,9 @@ function renderActiveTab(){
     if(excNeg && r.val < 0) return false;
     return true;
   });
+
+  // Update Health Breakdown (latest month in range & current filters)
+  updateHealthBlock(filtered);
 
   const colsCommon = [
     {key:'Month',label:'Month'},
@@ -522,25 +715,9 @@ function renderActiveTab(){
   }
 }
 
-function getMulti(sel){ if(!sel) return new Set(); return new Set(Array.from(sel.selectedOptions).map(o=>o.value)); }
-function monthBounds(){
-  const f=$('#fromMonth').value || MONTHS[0]; const t=$('#toMonth').value || MONTHS[MONTHS.length-1];
-  return (f<=t)?[f,t]:[t,f];
-}
-function fillFilterOptions(){
-  const fm=$('#fromMonth'), tm=$('#toMonth');
-  const fmt=(mk)=>{ const [y,m]=mk.split('-'); return `${y}-${m}`; };
-  fm.innerHTML = MONTHS.map(mk=> `<option value="${mk}">${fmt(mk)}</option>`).join('');
-  tm.innerHTML = fm.innerHTML;
-  fm.value = MONTHS[0] || ''; tm.value = MONTHS[MONTHS.length-1] || '';
-
-  $('#lobFilter').innerHTML  = LOBS.map(v=> `<option value="${v}">${v}</option>`).join('');
-  $('#zoneFilter').innerHTML = ZONES.map(v=> `<option value="${v}">${v}</option>`).join('');
-  $('#baFilter').innerHTML   = BAS.map(v=> `<option value="${v}">${v}</option>`).join('');
-  $('#intFilter').innerHTML  = INTERMEDIARIES.map(v=> `<option value="${v}">${v}</option>`).join('');
-}
-
-/* ========== EXPORT ========== */
+/* =============================================================================
+   EXPORT (current table)
+============================================================================= */
 function exportCurrent(){
   const container=document.getElementById(activeTab); const table=container.querySelector('table');
   if(!table){ alert('Nothing to export yet.'); return; }
@@ -558,7 +735,9 @@ function exportCurrent(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`MoM_${activeTab}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
 }
 
-/* ========== INGESTION & REBUILD ========== */
+/* =============================================================================
+   INGESTION & REBUILD
+============================================================================= */
 function resolveRequiredIndices(rows, headers){
   HMAP_MULTI = buildHeaderMapMulti(headers);
 
@@ -603,7 +782,7 @@ function resolveRequiredIndices(rows, headers){
     Indices: ACTIVE_INDICES
   });
 
-  // Build diagnostics UI if duplicates exist (we only show for Zone here)
+  // Diagnostics UI if duplicates exist (example: Zone)
   buildDiagnosticsUI({
     zonePick
   });
@@ -709,7 +888,9 @@ function ingestCSV(text){
   rebuildFromRows();
 }
 
-/* ========== EVENTS ========== */
+/* =============================================================================
+   EVENTS
+============================================================================= */
 $('#fileInput').addEventListener('change', (e)=>{
   const f=e.target.files?.[0]; if(!f) return;
   const reader=new FileReader();
@@ -741,6 +922,7 @@ $('#btnClear').addEventListener('click', ()=>{
 });
 $('#btnExport').addEventListener('click', exportCurrent);
 $('#btnApplyDiag').addEventListener('click', applyDiagnosticsSelection);
+document.getElementById('btnExportHealth')?.addEventListener('click', exportHealthSummary);
 </script>
 </body>
 </html>
