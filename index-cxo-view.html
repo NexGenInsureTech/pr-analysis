@@ -59,10 +59,24 @@
   .small{font-size:11px;color:#ccbf8a}
   .sample{font-family:var(--mono);font-size:11px;background:#0f0e09;border:1px solid #5a4b15;padding:4px 6px;border-radius:6px;color:#ffe7a8}
 
-  /* Totals bar */
+  /* Totals-like bars */
   .totalsbar{display:flex;gap:12px;align-items:center;padding:8px 10px;background:#0f1434;border:1px solid #2a3164;border-radius:10px;margin:8px 8px 0 8px}
   .totalsbar .k{font-size:11px;color:#bcd0ff}
   .totalsbar .v{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* === Phase‑1 Polish: tones, borders & badges === */
+  .tone-amber { color:#ffd27a !important; }
+  .tone-red   { color:#ff9b9b !important; }
+  .bar-amber  { border-color:#f5a623 !important; box-shadow:0 0 0 1px rgba(245,166,35,.25) inset }
+  .bar-red    { border-color:#ff7a7a !important; box-shadow:0 0 0 1px rgba(255,122,122,.25) inset }
+  .badge{ font-size:10px; border:1px solid var(--grid); border-radius:6px; padding:1px 6px; margin-left:6px; background:#1e244a; color:#cbd6ff }
+  .badge.warn{ border-color:#ffb86b; color:#ffd7aa; background:rgba(255,184,107,.12) }
+
+  /* Presets block */
+  details.preset { margin:8px; border:1px solid var(--grid); border-radius:10px; padding:6px 10px; background:#0f1434 }
+  details.preset summary { cursor:pointer; color:#cfe1ff }
+  .preset-row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-top:8px }
+  .preset-row label { color:#cbd6ff; font-size:12px }
 </style>
 </head>
 <body>
@@ -77,7 +91,7 @@
     <div class="body">
       <input id="fileInput" type="file" accept=".csv" />
       <div class="note" style="margin-top:8px">
-        Required columns: <em>Month</em>, <em>LINE OF BUSINESS</em>, <em>Zone</em>, <em>BA NAME</em>, <em>USGI NET PREMIUM</em>. Your dataset also contains intermediary/broker fields for the new slice. 
+        Required columns: <em>Month</em>, <em>LINE OF BUSINESS</em>, <em>Zone</em>, <em>BA NAME</em>, <em>USGI NET PREMIUM</em>. Your dataset also contains intermediary/broker fields for the new slice.
       </div>
       <!-- Diagnostics: only appears if duplicates detected -->
       <div id="diagPanel" class="diag hidden">
@@ -145,10 +159,26 @@
         <button class="tab-btn" data-tab="s4">Slice 4 — Intermediary × LOB MoM</button>
         <span class="pill" id="metricPill"></span>
         <span class="pill" id="rowsPill"></span>
+        <!-- Insights toggle -->
+        <label class="pill" style="cursor:pointer; display:flex; align-items:center; gap:6px">
+          <input type="checkbox" id="toggleInsights" checked />
+          Insights
+        </label>
         <div style="margin-left:auto" class="row">
           <button class="btn secondary" id="btnExport">Download current view (CSV)</button>
         </div>
       </div>
+
+      <!-- Optional: Presets (hidden by default via <details>) -->
+      <details class="preset">
+        <summary>Threshold Presets (Conservative / Neutral / Aggressive)</summary>
+        <div class="preset-row">
+          <label><input type="radio" name="preset" value="conservative" /> Conservative</label>
+          <label><input type="radio" name="preset" value="neutral" checked /> Neutral</label>
+          <label><input type="radio" name="preset" value="aggressive" /> Aggressive</label>
+          <span class="note">Presets adjust bucket sensitivity (growth & risk). You can still filter normally.</span>
+        </div>
+      </details>
 
       <!-- Totals bar (Grand Total for visible rows) -->
       <div id="totalsBar" class="totalsbar hidden">
@@ -180,7 +210,56 @@
           </div>
         </div>
         <div style="margin-left:auto" class="row">
+          <button class="btn secondary" id="btnCopyNarr">Copy narrative</button>
           <button class="btn secondary" id="btnExportHealth">Download health summary (CSV)</button>
+        </div>
+      </div>
+
+      <!-- Impact Lists (Phase 1 – Step 2) -->
+      <div id="impactBlock" class="totalsbar hidden" style="background:#0e1a56; border-color:#4157c9">
+        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:100%">
+          <div style="min-width:320px;flex:1 1 360px">
+            <span class="k" style="display:block;margin-bottom:6px">Top Contributors (by net MoM)</span>
+            <ol id="topList" style="margin:0;padding-left:16px"></ol>
+            <div class="row" style="margin-top:6px;gap:8px">
+              <button class="btn secondary" id="btnCopyTop">Copy Top 10</button>
+            </div>
+          </div>
+          <div style="min-width:320px;flex:1 1 360px">
+            <span class="k" style="display:block;margin-bottom:6px">Bottom Leakages (by net MoM)</span>
+            <ol id="bottomList" style="margin:0;padding-left:16px"></ol>
+            <div class="row" style="margin-top:6px;gap:8px">
+              <button class="btn secondary" id="btnCopyBottom">Copy Bottom 10</button>
+            </div>
+          </div>
+          <div style="margin-left:auto" class="row">
+            <button class="btn secondary" id="btnExportImpact">Download top/bottom (CSV)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Decision Buckets (Phase 1 – Step 3) -->
+      <div id="bucketBlock" class="totalsbar hidden" style="background:#0d1d4e; border-color:#2c4ad2">
+        <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;width:100%">
+          <div style="min-width:260px;flex:1 1 300px">
+            <span class="k" id="hdrAccel"  style="display:block;margin-bottom:6px">🔥 Accelerators</span>
+            <ul id="bucketAccelerator" style="margin:0;padding-left:16px"></ul>
+          </div>
+          <div style="min-width:260px;flex:1 1 300px">
+            <span class="k" id="hdrStable" style="display:block;margin-bottom:6px">✅ Stable Core</span>
+            <ul id="bucketStable" style="margin:0;padding-left:16px"></ul>
+          </div>
+          <div style="min-width:260px;flex:1 1 300px">
+            <span class="k" id="hdrRisk"   style="display:block;margin-bottom:6px">⚠️ At Risk</span>
+            <ul id="bucketRisk" style="margin:0;padding-left:16px"></ul>
+          </div>
+          <div style="min-width:260px;flex:1 1 300px">
+            <span class="k" id="hdrLeak"   style="display:block;margin-bottom:6px">❌ Leakage</span>
+            <ul id="bucketLeakage" style="margin:0;padding-left:16px"></ul>
+          </div>
+          <div style="margin-left:auto" class="row">
+            <button class="btn secondary" id="btnExportBuckets">Download buckets (CSV)</button>
+          </div>
         </div>
       </div>
 
@@ -205,6 +284,43 @@
 
 <script>
 "use strict";
+
+/* =============================================================================
+   CONFIG
+============================================================================= */
+const IMPACT_TOP_N = 10; // Top/Bottom list sizes
+
+// Decision bucket thresholds (modifiable via presets)
+const BUCKET_CFG = {
+  pctAccel: 0.10,          // >= +10% MoM -> Accelerator (if sized)
+  minValueAccel: 0,        // require Value >= this to call "Accelerator" (0 = disabled)
+  pctLeakageSharp: -0.10,  // <= -10% MoM -> Leakage (if not Drop)
+  trailingWindow: 3,       // lookback months (including latest)
+  requireNegMonths: 2,     // >=2 negative months in trailing window -> At Risk
+  topN: 10                 // show up to N names per bucket block
+};
+
+// Health stress thresholds (for tone + bar border)
+const UI_THRESH = {
+  stressAmber: 0.08,  // 8% of base under stress -> Amber
+  stressRed:   0.15   // 15% of base under stress -> Red
+};
+
+/* Preset definitions (risk sensitivity) */
+const PRESETS = {
+  conservative: { pctAccel: 0.15, pctLeakageSharp: -0.15, trailingWindow: 3, requireNegMonths: 3, minValueAccel: 0 },
+  neutral:      { pctAccel: 0.10, pctLeakageSharp: -0.10, trailingWindow: 3, requireNegMonths: 2, minValueAccel: 0 },
+  aggressive:   { pctAccel: 0.08, pctLeakageSharp: -0.05, trailingWindow: 3, requireNegMonths: 1, minValueAccel: 0 }
+};
+function applyPreset(name){
+  const p = PRESETS[name] || PRESETS.neutral;
+  BUCKET_CFG.pctAccel = p.pctAccel;
+  BUCKET_CFG.pctLeakageSharp = p.pctLeakageSharp;
+  BUCKET_CFG.trailingWindow = p.trailingWindow;
+  BUCKET_CFG.requireNegMonths = p.requireNegMonths;
+  BUCKET_CFG.minValueAccel = p.minValueAccel;
+  renderActiveTab();
+}
 
 /* =============================================================================
    CSV PARSER
@@ -246,7 +362,7 @@ function parseMonthAny(s){
 
   { const m = s.match(/^([A-Za-z]{3})[\s-]?(\d{2,4})$/);
     if (m) { const mm = mapMon[m[1].toLowerCase()]; if (mm != null) return new Date(toYY(+m[2]), mm, 1); } }
-  // Fixed capture for YYYY[-/]MM or YYYYMM
+  // YYYY[-/]MM or YYYYMM
   { const m = s.match(/^(\d{4})[-\/]?(\d{1,2})(?:[-\/]\d{1,2})?$/);
     if (m) return new Date(+m[1], +m[2]-1, 1); }
   { const m = s.match(/^(\d{1,2})\d{1,2}\d{2,4}$/);
@@ -264,7 +380,7 @@ function slug(s){ return String(s || '').toLowerCase().trim().replace(/\s+/g,'_'
 
 function toNumber(x){
   if (x == null) return 0;
-  const s = String(x).replace(/[, ]+/g, '').trim(); // drop commas & spaces
+  const s = String(x).replace(/[, ]+/g, '').trim();
   if (s === '') return 0;
   const n = Number(s);
   return isNaN(n) ? 0 : n;
@@ -304,7 +420,6 @@ function pickBestIndexForSlug(hmap, slugKey, rows, sampleN=150){
     return { idx, label: entry.originals[entry.indices.indexOf(idx)], ...st };
   });
   if(candidates.length===1) return { index:candidates[0].idx, candidates };
-  // if duplicates, choose best by nonEmpty, then distinct, then leftmost
   candidates.sort((a,b)=>{
     if(b.nonEmpty!==a.nonEmpty) return b.nonEmpty-a.nonEmpty;
     if(b.distinct!==a.distinct) return b.distinct-a.distinct;
@@ -320,6 +435,7 @@ let RAW=[], MONTHS=[], LOBS=[], ZONES=[], BAS=[], INTERMEDIARIES=[];
 let METRIC_USED='';
 let RAW_CSV_ROWS=null, HEADERS=null, HMAP_MULTI=null;
 let COLUMN_OVERRIDE={}, ACTIVE_INDICES={};
+let activeTab='s1'; const sortState={key:'', dir:1};
 
 /* =============================================================================
    ENGINE
@@ -391,7 +507,7 @@ function toMoMTable(grouped, keys){
 }
 
 /* =============================================================================
-   RENDERING
+   RENDERING (grid + totals)
 ============================================================================= */
 function makeTable(container, rows, columns, sortState){
   container.innerHTML='';
@@ -443,10 +559,8 @@ function makeTable(container, rows, columns, sortState){
   }
   table.appendChild(thead); table.appendChild(tbody); container.appendChild(table);
 
-  // Grand totals for the visible rows
   updateTotals(rows);
 }
-
 function updateTotals(rows){
   const bar = $('#totalsBar');
   if(!rows || rows.length===0){
@@ -468,46 +582,19 @@ function updateTotals(rows){
   bar.classList.remove('hidden');
 }
 
-let activeTab='s1'; const sortState={key:'', dir:1};
-
-function monthBounds(){
-  const f=$('#fromMonth').value || MONTHS[0]; const t=$('#toMonth').value || MONTHS[MONTHS.length-1];
-  return (f<=t)?[f,t]:[t,f];
-}
-function fillFilterOptions(){
-  const fm=$('#fromMonth'), tm=$('#toMonth');
-  const fmt=(mk)=>{ const [y,m]=mk.split('-'); return `${y}-${m}`; };
-  fm.innerHTML = MONTHS.map(mk=> `<option value="${mk}">${fmt(mk)}</option>`).join('');
-  tm.innerHTML = fm.innerHTML;
-  fm.value = MONTHS[0] || ''; tm.value = MONTHS[MONTHS.length-1] || '';
-
-  $('#lobFilter').innerHTML  = LOBS.map(v=> `<option value="${v}">${v}</option>`).join('');
-  $('#zoneFilter').innerHTML = ZONES.map(v=> `<option value="${v}">${v}</option>`).join('');
-  $('#baFilter').innerHTML   = BAS.map(v=> `<option value="${v}">${v}</option>`).join('');
-  $('#intFilter').innerHTML  = INTERMEDIARIES.map(v=> `<option value="${v}">${v}</option>`).join('');
-}
-
 /* =============================================================================
    HEALTH BREAKDOWN (Phase 1 – Step 1)
-   Decomposes latest month in current range & filters by Growth_Flag
 ============================================================================= */
 function computeHealthBreakdown(filteredRows){
   if (!filteredRows || filteredRows.length === 0) return null;
-
-  // Identify the latest month present in the filtered raw
   const latest = filteredRows.reduce((acc, r) => (acc < r.monthKey ? r.monthKey : acc), filteredRows[0].monthKey);
-
-  // Build grouping keys based on active tab
   const keys =
     activeTab === 's1' ? ['lob'] :
     activeTab === 's2' ? ['zone','lob'] :
     activeTab === 's3' ? ['ba','lob'] :
                          ['intermediary','lob'];
-
   const g = groupSum(filteredRows, keys);
   const t = toMoMTable(g, keys);
-
-  // Only consider latest month rows
   const latestRows = t.filter(x => x.Month === latest);
   if (latestRows.length === 0) return null;
 
@@ -528,9 +615,9 @@ function computeHealthBreakdown(filteredRows){
   const newBusiness    = Math.max(0, byFlag.New);
   const growthPool     = existingGrowth + newBusiness;
 
-  const degr   = byFlag.Degrowth;            // negative contributions expected
-  const drop   = byFlag.Drop;                // negative
-  const flat   = byFlag.Flat || 0;           // near zero
+  const degr   = byFlag.Degrowth;
+  const drop   = byFlag.Drop;
+  const flat   = byFlag.Flat || 0;
   const erosion = Math.abs(Math.min(0, degr)) + Math.abs(Math.min(0, drop));
 
   const pctExisting = growthPool > 0 ? (existingGrowth / growthPool) : null;
@@ -557,16 +644,16 @@ function computeHealthBreakdown(filteredRows){
 
 function updateHealthBlock(filteredRaw){
   const block = document.getElementById('healthBlock');
-  if (!filteredRaw || filteredRaw.length === 0){
-    block.classList.add('hidden');
-    return;
-  }
+  const toggle = document.getElementById('toggleInsights');
+  if(toggle && !toggle.checked){ block.classList.add('hidden'); return; }
+
+  if (!filteredRaw || filteredRaw.length === 0){ block.classList.add('hidden'); return; }
   const hb = computeHealthBreakdown(filteredRaw);
-  if (!hb){
-    block.classList.add('hidden');
-    return;
-  }
-  // Populate UI
+  if (!hb){ block.classList.add('hidden'); return; }
+
+  // Reset border tone classes
+  block.classList.remove('bar-amber','bar-red');
+
   document.getElementById('hbMonth').textContent = fmtMonthKey(hb.monthKey);
   document.getElementById('hbExisting').textContent = fmtNum(hb.composition.existingGrowth, 0);
   document.getElementById('hbNew').textContent      = fmtNum(hb.composition.newBusiness, 0);
@@ -578,7 +665,15 @@ function updateHealthBlock(filteredRaw){
   document.getElementById('hbPctExisting').textContent = hb.percents.pctExisting == null ? '—' : pctStr(hb.percents.pctExisting);
   document.getElementById('hbPctNew').textContent      = hb.percents.pctNew == null ? '—' : pctStr(hb.percents.pctNew);
   document.getElementById('hbPctStress').textContent   = hb.percents.pctStress == null ? '—' : pctStr(hb.percents.pctStress);
-  document.getElementById('hbNarr').textContent        = hb.narrative || '—';
+
+  // Tone the narrative + bar border by stress levels
+  const narrEl = document.getElementById('hbNarr');
+  narrEl.textContent = hb.narrative || '—';
+  narrEl.classList.remove('tone-amber','tone-red');
+  if (hb.percents.pctStress != null){
+    if (hb.percents.pctStress >= UI_THRESH.stressRed) { narrEl.classList.add('tone-red'); block.classList.add('bar-red'); }
+    else if (hb.percents.pctStress >= UI_THRESH.stressAmber) { narrEl.classList.add('tone-amber'); block.classList.add('bar-amber'); }
+  }
 
   block.classList.remove('hidden');
 }
@@ -590,7 +685,7 @@ function exportHealthSummary(){
     return;
   }
 
-  // Rebuild filtered RAW snapshot (keep logic identical to renderActiveTab filter)
+  // Rebuild filtered RAW snapshot (keep logic identical to renderActiveTab)
   const [minM, maxM] = monthBounds();
   const lobSel  = getMulti($('#lobFilter'));
   const zoneSel = getMulti($('#zoneFilter'));
@@ -645,15 +740,344 @@ function exportHealthSummary(){
 }
 
 /* =============================================================================
+   IMPACT LISTS (Phase 1 – Step 2)
+============================================================================= */
+function labelForRow(keys, r){
+  if (keys.length === 1) {
+    if (keys[0] === 'lob') return r.lob;
+    return r[keys[0]];
+  }
+  return keys.map(k => r[k]).join(' · ');
+}
+
+function computeImpactLists(filteredRows, topN=IMPACT_TOP_N){
+  if(!filteredRows || filteredRows.length===0) return null;
+  const latest = filteredRows.reduce((acc, r) => (acc < r.monthKey ? r.monthKey : acc), filteredRows[0].monthKey);
+  const keys =
+    activeTab === 's1' ? ['lob'] :
+    activeTab === 's2' ? ['zone','lob'] :
+    activeTab === 's3' ? ['ba','lob'] :
+                         ['intermediary','lob'];
+  const g = groupSum(filteredRows, keys);
+  const t = toMoMTable(g, keys);
+  const latestRows = t.filter(x => x.Month === latest);
+  if(latestRows.length===0) return null;
+
+  const items = latestRows.map(x => ({
+    label: labelForRow(keys, x),
+    delta: typeof x.MoM_Abs_Change === 'number' ? x.MoM_Abs_Change : 0,
+    value: typeof x.Value === 'number' ? x.Value : 0,
+    prev:  typeof x.Prev_Month_Value === 'number' ? x.Prev_Month_Value : 0,
+    flag:  x.Growth_Flag || 'NA',
+    month: x.Month
+  }));
+
+  const positives = items.filter(i => i.delta > 0).sort((a,b)=> b.delta - a.delta).slice(0, topN);
+  const negatives = items.filter(i => i.delta < 0).sort((a,b)=> a.delta - b.delta).slice(0, topN);
+
+  return { latest, keys, positives, negatives, metric: METRIC_USED };
+}
+
+function updateImpactBlock(filteredRows){
+  const block = document.getElementById('impactBlock');
+  const toggle = document.getElementById('toggleInsights');
+  if(toggle && !toggle.checked){ block.classList.add('hidden'); return; }
+
+  if(!filteredRows || filteredRows.length===0){ block.classList.add('hidden'); return; }
+  const res = computeImpactLists(filteredRows);
+  if(!res || (res.positives.length===0 && res.negatives.length===0)){ block.classList.add('hidden'); return; }
+
+  // Compute buckets too to mark focus (Risk/Leakage)
+  const buck = computeDecisionBuckets(filteredRows);
+  const focus = new Set();
+  if (buck){
+    buck.buckets.Risk.forEach(it => focus.add(it.label));
+    buck.buckets.Leakage.forEach(it => focus.add(it.label));
+  }
+
+  const topList = document.getElementById('topList');
+  const bottomList = document.getElementById('bottomList');
+  topList.innerHTML = ''; bottomList.innerHTML = '';
+
+  const makeLi = (it) => {
+    const li = document.createElement('li'); li.style.margin='2px 0';
+    const name = document.createElement('span'); name.textContent = it.label + ' — ';
+    const delta = document.createElement('span'); delta.textContent = (it.delta>=0? '+':'') + fmtNum(it.delta,0); delta.style.fontFamily='var(--mono)';
+    const sep = document.createElement('span'); sep.textContent = ' ';
+    const val = document.createElement('span'); val.textContent = `(Value ${fmtNum(it.value,0)})`; val.style.color = '#a9b6ec';
+    const flag = document.createElement('span'); flag.className = 'flag ' + (it.flag && it.flag.replace('/','') || 'NA'); flag.style.marginLeft='6px'; flag.textContent = it.flag;
+
+    li.appendChild(name); li.appendChild(delta); li.appendChild(sep); li.appendChild(val); li.appendChild(flag);
+
+    if (focus.has(it.label)) {
+      const badge = document.createElement('span');
+      badge.className = 'badge warn';
+      badge.textContent = '⚠ focus';
+      li.appendChild(badge);
+    }
+    return li;
+  };
+
+  res.positives.forEach(it => topList.appendChild(makeLi(it)));
+  res.negatives.forEach(it => bottomList.appendChild(makeLi(it)));
+
+  block.classList.remove('hidden');
+
+  // Store latest list for copy buttons
+  block.dataset.top = JSON.stringify(res.positives.map(i=>i.label));
+  block.dataset.bottom = JSON.stringify(res.negatives.map(i=>i.label));
+}
+
+function exportImpactCSV(){
+  const block = document.getElementById('impactBlock');
+  if(block.classList.contains('hidden')){
+    alert('Top/Bottom lists not available yet. Load data or adjust filters.');
+    return;
+  }
+  // Rebuild filtered snapshot identical to renderActiveTab
+  const [minM, maxM] = monthBounds();
+  const lobSel  = getMulti($('#lobFilter'));
+  const zoneSel = getMulti($('#zoneFilter'));
+  const baSel   = getMulti($('#baFilter'));
+  const intSel  = getMulti($('#intFilter'));
+  const excNeg  = $('#excludeNegatives')?.checked;
+
+  const filtered = RAW.filter(r=>{
+    if(r.monthKey < minM || r.monthKey > maxM) return false;
+    if(lobSel.size  && !lobSel.has(r.lob))  return false;
+    if(zoneSel.size && !zoneSel.has(r.zone)) return false;
+    if(baSel.size   && !baSel.has(r.ba))    return false;
+    if(intSel.size  && !intSel.has(r.intermediary)) return false;
+    if(excNeg && r.val < 0) return false;
+    return true;
+  });
+
+  const res = computeImpactLists(filtered);
+  if(!res){ alert('Nothing to export.'); return; }
+
+  const headers = ['Rank','List','Entity','Month','MoM_Abs_Change','Value','Prev','Growth_Flag','Metric'];
+  const rows = [];
+  res.positives.forEach((it, idx)=> rows.push([idx+1, 'Top', it.label, fmtMonthKey(it.month), it.delta, it.value, it.prev, it.flag, METRIC_USED]));
+  res.negatives.forEach((it, idx)=> rows.push([idx+1, 'Bottom', it.label, fmtMonthKey(it.month), it.delta, it.value, it.prev, it.flag, METRIC_USED]));
+
+  const csv = [headers.join(','), ...rows.map(r=>{
+    return r.map(v=>{
+      const s = String(v==null?'':v).replaceAll('\n',' ').replaceAll('\r',' ');
+      return (s.includes(',')||s.includes('"')) ? `"${s.replaceAll('"','""')}"` : s;
+    }).join(',');
+  })].join('\n');
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `TopBottom_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+/* Quick-copy of names */
+function copyList(names){
+  const line = names.join(', ');
+  const done = () => alert('Names copied to clipboard');
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(line).then(done).catch(()=>{
+      const ta=document.createElement('textarea'); ta.value=line; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); }finally{ document.body.removeChild(ta); }
+      done();
+    });
+  }else{
+    const ta=document.createElement('textarea'); ta.value=line; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }finally{ document.body.removeChild(ta); }
+    done();
+  }
+}
+
+function copyTopNames(){
+  const block = document.getElementById('impactBlock');
+  const names = JSON.parse(block.dataset.top || '[]');
+  if(!names.length){ alert('Top list is empty.'); return; }
+  copyList(names);
+}
+function copyBottomNames(){
+  const block = document.getElementById('impactBlock');
+  const names = JSON.parse(block.dataset.bottom || '[]');
+  if(!names.length){ alert('Bottom list is empty.'); return; }
+  copyList(names);
+}
+
+/* =============================================================================
+   DECISION BUCKETS (Phase 1 – Step 3)
+============================================================================= */
+function computeDecisionBuckets(filteredRows){
+  if(!filteredRows || filteredRows.length===0) return null;
+
+  const keys =
+    activeTab === 's1' ? ['lob'] :
+    activeTab === 's2' ? ['zone','lob'] :
+    activeTab === 's3' ? ['ba','lob'] :
+                         ['intermediary','lob'];
+
+  const g = groupSum(filteredRows, keys);
+  const t = toMoMTable(g, keys);              // entity-month MoM rows
+  if(!t.length) return null;
+
+  const latest = filteredRows.reduce((acc, r) => (acc < r.monthKey ? r.monthKey : acc), filteredRows[0].monthKey);
+
+  // Build map: label -> sorted time-series rows
+  const series = new Map();
+  for(const r of t){
+    const label = labelForRow(keys, r);
+    if(!series.has(label)) series.set(label, []);
+    series.get(label).push(r);
+  }
+  for(const arr of series.values()){
+    arr.sort((a,b)=> a.Month.localeCompare(b.Month)); // ascending
+  }
+
+  const buckets = { Accelerator: [], Stable: [], Risk: [], Leakage: [] };
+
+  for(const [label, arr] of series.entries()){
+    const last = arr[arr.length-1];
+    if(last.Month !== latest) continue;
+
+    const value = typeof last.Value==='number'? last.Value: 0;
+    const prev  = typeof last.Prev_Month_Value==='number'? last.Prev_Month_Value: 0;
+    const delta = typeof last.MoM_Abs_Change==='number'? last.MoM_Abs_Change: 0;
+    const pct   = last["MoM_%_Change"];
+    const flag  = last.Growth_Flag || 'NA';
+
+    // trailing window including latest (up to cfg window size)
+    const w = BUCKET_CFG.trailingWindow;
+    const tail = arr.slice(-w);
+    const negMonths = tail.filter(r=>{
+      const d = (typeof r.MoM_Abs_Change==='number'? r.MoM_Abs_Change: 0);
+      return d < 0 || r.Growth_Flag==='Degrowth' || r.Growth_Flag==='Drop';
+    }).length;
+
+    let bucket='Stable';
+    const reasons=[];
+
+    if(flag==='Drop'){
+      bucket='Leakage'; reasons.push('Drop');
+    } else if (pct != null && pct <= BUCKET_CFG.pctLeakageSharp) {
+      bucket='Leakage'; reasons.push(`Sharp negative (${pctStr(pct)})`);
+    } else if (flag==='Degrowth' || negMonths >= BUCKET_CFG.requireNegMonths){
+      bucket='Risk';
+      if(flag==='Degrowth') reasons.push('Degrowth');
+      if(negMonths >= BUCKET_CFG.requireNegMonths) reasons.push(`Repeated decline ${negMonths}/${tail.length}`);
+    } else if ((flag==='Growth' && pct!=null && pct>=BUCKET_CFG.pctAccel && value>=BUCKET_CFG.minValueAccel) ||
+               (flag==='New' && value>=BUCKET_CFG.minValueAccel)){
+      bucket='Accelerator';
+      if(flag==='New') reasons.push('New acquisition');
+      else reasons.push(`Strong growth (${pctStr(pct)})`);
+      if(BUCKET_CFG.minValueAccel>0) reasons.push(`Sized (≥ ${fmtNum(BUCKET_CFG.minValueAccel,0)})`);
+    } else {
+      bucket='Stable';
+      if(flag==='Flat') reasons.push('Flat');
+      else if(flag==='Growth') reasons.push('Mild growth');
+      else reasons.push(flag);
+    }
+
+    const item = {
+      label, bucket, value, prev, delta, pct, flag, negMonths,
+      month: last.Month,
+      reason: reasons.join('; ')
+    };
+
+    if(bucket==='Accelerator') buckets.Accelerator.push(item);
+    else if(bucket==='Risk') buckets.Risk.push(item);
+    else if(bucket==='Leakage') buckets.Leakage.push(item);
+    else buckets.Stable.push(item);
+  }
+
+  // Sort within buckets for display
+  buckets.Accelerator.sort((a,b)=> b.delta - a.delta); // strongest up first
+  buckets.Stable.sort((a,b)=> b.value - a.value);      // largest book first
+  buckets.Risk.sort((a,b)=> a.delta - b.delta);        // worst negatives first
+  buckets.Leakage.sort((a,b)=>{
+    const isDropA = a.flag==='Drop', isDropB = b.flag==='Drop';
+    if(isDropA!==isDropB) return isDropA? -1 : 1;
+    return a.delta - b.delta;
+  });
+
+  return { latest, keys, buckets };
+}
+
+function updateBucketBlock(filteredRows){
+  const block = document.getElementById('bucketBlock');
+  const toggle = document.getElementById('toggleInsights');
+  if(toggle && !toggle.checked){ block.classList.add('hidden'); return; }
+
+  if(!filteredRows || filteredRows.length===0){ block.classList.add('hidden'); return; }
+  const res = computeDecisionBuckets(filteredRows);
+  if(!res){ block.classList.add('hidden'); return; }
+
+  const renderList = (elId, arr, limit) => {
+    const el = document.getElementById(elId);
+    el.innerHTML = '';
+    arr.slice(0, limit).forEach(it=>{
+      const li = document.createElement('li'); li.style.margin='2px 0';
+      const name = document.createElement('span'); name.textContent = it.label + ' — ';
+      const delta = document.createElement('span'); delta.textContent = (it.delta>=0? '+':'') + fmtNum(it.delta,0); delta.style.fontFamily='var(--mono)';
+      const sep1 = document.createElement('span'); sep1.textContent=' ';
+      const val = document.createElement('span'); val.textContent = `(Value ${fmtNum(it.value,0)})`; val.style.color='#a9b6ec';
+      const sep2 = document.createElement('span'); sep2.textContent=' ';
+      const reason = document.createElement('span'); reason.textContent = it.reason; reason.style.color='#cbd6ff';
+      const flag = document.createElement('span'); flag.className='flag ' + (it.flag && it.flag.replace('/','') || 'NA'); flag.style.marginLeft='6px'; flag.textContent=it.flag;
+
+      li.appendChild(name); li.appendChild(delta); li.appendChild(sep1); li.appendChild(val); li.appendChild(flag); li.appendChild(sep2); li.appendChild(reason);
+      el.appendChild(li);
+    });
+  };
+
+  const a = res.buckets.Accelerator.length;
+  const s = res.buckets.Stable.length;
+  const r = res.buckets.Risk.length;
+  const l = res.buckets.Leakage.length;
+
+  // Header counts
+  const hdr = (id, base, n) => { const el=document.getElementById(id); if(el) el.textContent = `${base} (${n})`; };
+  hdr('hdrAccel','🔥 Accelerators',a);
+  hdr('hdrStable','✅ Stable Core',s);
+  hdr('hdrRisk','⚠️ At Risk',r);
+  hdr('hdrLeak','❌ Leakage',l);
+
+  renderList('bucketAccelerator', res.buckets.Accelerator, BUCKET_CFG.topN);
+  renderList('bucketStable',      res.buckets.Stable,      BUCKET_CFG.topN);
+  renderList('bucketRisk',        res.buckets.Risk,        BUCKET_CFG.topN);
+  renderList('bucketLeakage',     res.buckets.Leakage,     BUCKET_CFG.topN);
+
+  const totalItems = a+s+r+l;
+  if(totalItems===0) block.classList.add('hidden'); else block.classList.remove('hidden');
+}
+
+/* =============================================================================
    ACTIVE TAB RENDER
 ============================================================================= */
+function monthBounds(){
+  const f=$('#fromMonth').value || MONTHS[0]; const t=$('#toMonth').value || MONTHS[MONTHS.length-1];
+  return (f<=t)?[f,t]:[t,f];
+}
+function fillFilterOptions(){
+  const fm=$('#fromMonth'), tm=$('#toMonth');
+  const fmt=(mk)=>{ const [y,m]=mk.split('-'); return `${y}-${m}`; };
+  fm.innerHTML = MONTHS.map(mk=> `<option value="${mk}">${fmt(mk)}</option>`).join('');
+  tm.innerHTML = fm.innerHTML;
+  fm.value = MONTHS[0] || ''; tm.value = MONTHS[MONTHS.length-1] || '';
+
+  $('#lobFilter').innerHTML  = LOBS.map(v=> `<option value="${v}">${v}</option>`).join('');
+  $('#zoneFilter').innerHTML = ZONES.map(v=> `<option value="${v}">${v}</option>`).join('');
+  $('#baFilter').innerHTML   = BAS.map(v=> `<option value="${v}">${v}</option>`).join('');
+  $('#intFilter').innerHTML  = INTERMEDIARIES.map(v=> `<option value="${v}">${v}</option>`).join('');
+}
+
 function renderActiveTab(){
   if(RAW.length===0){
     $('#emptyState').classList.remove('hidden');
     $('#s1').classList.add('hidden'); $('#s2').classList.add('hidden'); $('#s3').classList.add('hidden'); $('#s4').classList.add('hidden');
     $('#rowsPill').textContent=''; updateTotals([]);
-    // Hide health block if no data
     $('#healthBlock').classList.add('hidden');
+    $('#impactBlock').classList.add('hidden');
+    $('#bucketBlock').classList.add('hidden');
     return;
   }
   $('#emptyState').classList.add('hidden'); $('#s1').classList.add('hidden'); $('#s2').classList.add('hidden'); $('#s3').classList.add('hidden'); $('#s4').classList.add('hidden');
@@ -675,8 +1099,10 @@ function renderActiveTab(){
     return true;
   });
 
-  // Update Health Breakdown (latest month in range & current filters)
+  // Phase‑1 blocks (respect the Insights toggle inside each updater)
   updateHealthBlock(filtered);
+  updateImpactBlock(filtered);
+  updateBucketBlock(filtered);
 
   const colsCommon = [
     {key:'Month',label:'Month'},
@@ -706,7 +1132,6 @@ function renderActiveTab(){
     makeTable($('#s3'), t, [{key:'BA',label:'BA NAME'},{key:'LOB',label:'LINE OF BUSINESS'}, ...colsCommon], sortState);
     $('#rowsPill').textContent = `${t.length.toLocaleString()} rows`;
   } else {
-    // Slice 4 — Intermediary × LOB
     const g = groupSum(filtered, ['intermediary','lob']);
     const t = toMoMTable(g, ['intermediary','lob']).map(x=>({Intermediary:x.intermediary, LOB:x.lob, ...x}));
     $('#s4').classList.remove('hidden');
@@ -747,7 +1172,7 @@ function resolveRequiredIndices(rows, headers){
   const baPick    = pickBestIndexForSlug(HMAP_MULTI, 'ba_name', rows);
   const netPick   = pickBestIndexForSlug(HMAP_MULTI, 'usgi_net_premium', rows);
 
-  // Intermediary can be named differently; try common variants
+  // Intermediary can vary; try common variants
   const intSlugOptions = ['intermediary_name','intermediary','broker','agent','broker_name','agent_name'];
   let intPick = {index:null, candidates:[]};
   for(const s of intSlugOptions){
@@ -783,10 +1208,7 @@ function resolveRequiredIndices(rows, headers){
   });
 
   // Diagnostics UI if duplicates exist (example: Zone)
-  buildDiagnosticsUI({
-    zonePick
-  });
-
+  buildDiagnosticsUI({ zonePick });
   return true;
 }
 
@@ -889,6 +1311,30 @@ function ingestCSV(text){
 }
 
 /* =============================================================================
+   UTILITIES
+============================================================================= */
+function copyHealthNarrative(){
+  const month = document.getElementById('hbMonth')?.textContent || '';
+  const text  = document.getElementById('hbNarr')?.textContent || '';
+  const line  = `SME Health — ${month}: ${text}`;
+  const done  = () => alert('Narrative copied to clipboard');
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(line).then(done).catch(()=>{
+      const ta=document.createElement('textarea');
+      ta.value=line; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); }finally{ document.body.removeChild(ta); }
+      done();
+    });
+  } else {
+    const ta=document.createElement('textarea');
+    ta.value=line; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }finally{ document.body.removeChild(ta); }
+    done();
+  }
+}
+
+/* =============================================================================
    EVENTS
 ============================================================================= */
 $('#fileInput').addEventListener('change', (e)=>{
@@ -923,6 +1369,27 @@ $('#btnClear').addEventListener('click', ()=>{
 $('#btnExport').addEventListener('click', exportCurrent);
 $('#btnApplyDiag').addEventListener('click', applyDiagnosticsSelection);
 document.getElementById('btnExportHealth')?.addEventListener('click', exportHealthSummary);
+document.getElementById('btnExportImpact')?.addEventListener('click', exportImpactCSV);
+document.getElementById('btnExportBuckets')?.addEventListener('click', exportBucketsCSV);
+document.getElementById('btnCopyNarr')?.addEventListener('click', copyHealthNarrative);
+document.getElementById('btnCopyTop')?.addEventListener('click', copyTopNames);
+document.getElementById('btnCopyBottom')?.addEventListener('click', copyBottomNames);
+
+/* Insights toggle */
+document.getElementById('toggleInsights')?.addEventListener('change', (e)=>{
+  const on = e.target.checked;
+  const ids = ['healthBlock','impactBlock','bucketBlock'];
+  if(!on){
+    ids.forEach(id=> document.getElementById(id)?.classList.add('hidden'));
+  }else{
+    renderActiveTab();
+  }
+});
+
+/* Preset radios */
+Array.from(document.querySelectorAll('input[name="preset"]')).forEach(r=>{
+  r.addEventListener('change', (e)=> applyPreset(e.target.value));
+});
 </script>
 </body>
 </html>
